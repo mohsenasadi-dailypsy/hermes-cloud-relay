@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>⚡ Hermes Cloud Relay | راه‌اندازی درگاه هوش مصنوعی</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Vazirmatn', -apple-system, sans-serif; }
+    [dir="ltr"] { direction: ltr; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  </style>
+  <script>
+    var currentMainMethod = 'method-cli';
+    var currentOs = 'macos';
+    var currentAuth = 'global';
+
+    function switchMainMethod(method) {
+      currentMainMethod = method;
+      ['method-cli', 'method-web', 'method-manual'].forEach(function(m) {
+        var btn = document.getElementById('nav-' + m);
+        var sec = document.getElementById('sec-' + m);
+        if (m === method) {
+          btn.className = 'px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-lg shadow-orange-500/20 transition flex items-center gap-2';
+          sec.classList.remove('hidden');
+        } else {
+          btn.className = 'px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition flex items-center gap-2';
+          sec.classList.add('hidden');
+        }
+      });
+    }
+
+    function selectOs(os) {
+      currentOs = os;
+      ['macos', 'linux', 'windows'].forEach(function(o) {
+        var btn = document.getElementById('btn-os-' + o);
+        if (o === os) {
+          btn.className = 'px-3 py-1.5 rounded-xl text-xs font-black bg-amber-500 text-slate-950 shadow transition flex items-center gap-1';
+        } else {
+          btn.className = 'px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition flex items-center gap-1';
+        }
+      });
+      renderCliCommand();
+    }
+
+    function setAuthMethod(auth) {
+      currentAuth = auth;
+      var tabG = document.getElementById('tabGlobal');
+      var tabT = document.getElementById('tabToken');
+      var secG = document.getElementById('authGlobal');
+      var secT = document.getElementById('authToken');
+
+      if (auth === 'global') {
+        tabG.className = 'pb-2.5 border-b-2 border-amber-500 text-amber-400 transition font-black';
+        tabT.className = 'pb-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition font-bold';
+        secG.classList.remove('hidden');
+        secT.classList.add('hidden');
+      } else {
+        tabT.className = 'pb-2.5 border-b-2 border-amber-500 text-amber-400 transition font-black';
+        tabG.className = 'pb-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition font-bold';
+        secT.classList.remove('hidden');
+        secG.classList.add('hidden');
+      }
+      renderCliCommand();
+    }
+
+    function sanitizeWorkerName(inputEl, errorElId) {
+      var val = inputEl.value;
+      var lower = val.toLowerCase();
+      var sanitized = lower.replace(/[^a-z0-9-]/g, '-');
+      
+      var errEl = document.getElementById(errorElId);
+      if (val !== lower || /[^a-z0-9-]/.test(val)) {
+        errEl.innerText = '⚠️ نام ورکر فقط می‌تواند شامل حروف کوچک انگلیسی (a-z)، اعداد و خط تیره (-) باشد.';
+        errEl.classList.remove('hidden');
+      } else {
+        errEl.classList.add('hidden');
+      }
+      inputEl.value = sanitized;
+      renderCliCommand();
+    }
+
+    function sanitizeSubdomain(inputEl) {
+      inputEl.value = inputEl.value.toLowerCase().replace(/[^a-z0-9.-]/g, '');
+      renderCliCommand();
+    }
+
+    function renderCliCommand() {
+      var token = '';
+      var email = '';
+
+      if (currentAuth === 'global') {
+        var keyInput = document.getElementById('cfGlobalKey');
+        token = keyInput ? keyInput.value.trim() : '';
+        var emailInput = document.getElementById('cfEmail');
+        email = emailInput ? emailInput.value.trim() : '';
+      } else {
+        var tokenInput = document.getElementById('cfToken');
+        token = tokenInput ? tokenInput.value.trim() : '';
+      }
+
+      var wNameInput = document.getElementById('workerName');
+      var wName = wNameInput ? wNameInput.value.trim().toLowerCase() : '';
+      var subInput = document.getElementById('customSubdomain');
+      var sub = subInput ? subInput.value.trim().toLowerCase() : '';
+
+      var ts = Date.now();
+      var cmd = '';
+
+      if (currentOs === 'windows') {
+        cmd = '$env:CLOUDFLARE_API_TOKEN="' + (token || 'YOUR_KEY_HERE') + '"; ';
+        if (email) cmd += '$env:CLOUDFLARE_EMAIL="' + email + '"; ';
+        if (wName && wName !== 'hermes-cloud-relay') cmd += '$env:WORKER_NAME="' + wName + '"; ';
+        if (sub) cmd += '$env:CLOUDFLARE_SUBDOMAIN="' + sub + '"; ';
+        cmd += 'irm https://raw.githubusercontent.com/ketabchi-ar/Hermes-Cloud-Relay/main/install.ps1 | iex';
+      } else {
+        // macOS & Linux
+        cmd = 'curl -fsSL "https://raw.githubusercontent.com/ketabchi-ar/Hermes-Cloud-Relay/main/auto_deploy.py?ts=' + ts + '" | CLOUDFLARE_API_TOKEN="' + (token || 'YOUR_KEY_HERE') + '"';
+        if (email) cmd += ' CLOUDFLARE_EMAIL="' + email + '"';
+        if (wName && wName !== 'hermes-cloud-relay') cmd += ' WORKER_NAME="' + wName + '"';
+        if (sub) cmd += ' CLOUDFLARE_SUBDOMAIN="' + sub + '"';
+        cmd += ' python3 -';
+      }
+
+      var outBox = document.getElementById('commandText');
+      if (outBox) outBox.innerText = cmd;
+    }
+
+    function generateCli() {
+      var token = currentAuth === 'global' ? document.getElementById('cfGlobalKey').value.trim() : document.getElementById('cfToken').value.trim();
+      if (!token) {
+        alert('لطفاً کلید یا توکن کلودفلر را در کادر مربوطه وارد نمایید.');
+        return;
+      }
+      if (currentAuth === 'global' && !document.getElementById('cfEmail').value.trim()) {
+        alert('برای کلید Global API Key، وارد کردن ایمیل اکانت کلودفلر ضروری است.');
+        return;
+      }
+
+      renderCliCommand();
+      var outCont = document.getElementById('outputContainer');
+      outCont.classList.remove('hidden');
+      outCont.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function copyCommand() {
+      var text = document.getElementById('commandText').innerText;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text);
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      var btn = document.getElementById('copyBtn');
+      btn.innerHTML = '<span>✔</span> کپی شد!';
+      setTimeout(function() {
+        btn.innerHTML = '<span>📋</span> کپی با یک کلیک';
+      }, 2000);
+    }
+
+    // ==========================================
+    // Method 2: 100% In-Browser Web Wizard (BPB Style)
+    // ==========================================
+    async function startWebDeploy() {
+      var token = document.getElementById('webToken').value.trim();
+      var email = document.getElementById('webEmail').value.trim();
+      var wName = document.getElementById('webWorkerName').value.trim().toLowerCase() || 'hermes-cloud-relay';
+
+      if (!token) {
+        alert('لطفاً توکن یا کلید کلودفلر را وارد کنید.');
+        return;
+      }
+
+      var logBox = document.getElementById('webLog');
+      var statusBox = document.getElementById('webStatusContainer');
+      statusBox.classList.remove('hidden');
+      logBox.innerHTML = '';
+
+      function appendLog(msg, color) {
+        var el = document.createElement('div');
+        el.className = color || 'text-slate-300';
+        el.innerText = msg;
+        logBox.appendChild(el);
+        logBox.scrollTop = logBox.scrollHeight;
+      }
+
+      appendLog('🚀 آغاز فرآیند استقرار خودکار ویزارد کلودفلر...', 'text-amber-400 font-bold');
+
+      var headers = { 'Content-Type': 'application/json' };
+      if (email && token.length === 37) {
+        headers['X-Auth-Key'] = token;
+        headers['X-Auth-Email'] = email;
+      } else {
+        headers['Authorization'] = 'Bearer ' + token;
+      }
+
+      var proxyBase = 'https://corsproxy.io/?url=' + encodeURIComponent('https://api.cloudflare.com/client/v4');
+
+      try {
+        appendLog('1️⃣ بررسی دسترسی به حساب کلودفلر...', 'text-slate-400');
+        var accRes = await fetch(proxyBase + encodeURIComponent('/accounts'), { headers: headers });
+        var accData = await accRes.json();
+
+        if (!accData.success) {
+          throw new Error('احراز هویت ناموفق بود: ' + JSON.stringify(accData.errors));
+        }
+
+        var accountId = accData.result[0].id;
+        var accountName = accData.result[0].name;
+        appendLog('✔ متصل به حساب: ' + accountName + ' (' + accountId + ')', 'text-emerald-400 font-bold');
+
+        appendLog('2️⃣ دریافت کدهای رسمی 9Router از گیت‌هاب...', 'text-slate-400');
+        var ghRes = await fetch('https://raw.githubusercontent.com/ketabchi-ar/Hermes-Cloud-Relay/main/src/index.js');
+        var workerScript = await ghRes.text();
+
+        appendLog('3️⃣ در حال دیپلوی ورکر (' + wName + ') در شبکه ابری...', 'text-slate-400');
+        
+        var boundary = '----CFWebBoundary' + Math.random().toString(36).substring(2);
+        var metadata = JSON.stringify({ main_module: 'index.js' });
+        var multipart = '--' + boundary + '\r\n' +
+          'Content-Disposition: form-data; name="metadata"\r\n' +
+          'Content-Type: application/json\r\n\r\n' +
+          metadata + '\r\n' +
+          '--' + boundary + '\r\n' +
+          'Content-Disposition: form-data; name="index.js"; filename="index.js"\r\n' +
+          'Content-Type: application/javascript+module\r\n\r\n' +
+          workerScript + '\r\n' +
+          '--' + boundary + '--\r\n';
+
+        var deployHeaders = Object.assign({}, headers);
+        deployHeaders['Content-Type'] = 'multipart/form-data; boundary=' + boundary;
+
+        var deployUrl = proxyBase + encodeURIComponent('/accounts/' + accountId + '/workers/scripts/' + wName);
+        var deployRes = await fetch(deployUrl, {
+          method: 'PUT',
+          headers: deployHeaders,
+          body: multipart
+        });
+        var deployData = await deployRes.json();
+
+        if (!deployData.success) {
+          throw new Error('خطا در دیپلوی ورکر: ' + JSON.stringify(deployData.errors));
+        }
+        appendLog('✔ ورکر با موفقیت در اکانت کلودفلر ساخته و فعال شد!', 'text-emerald-400 font-bold');
+
+        appendLog('4️⃣ فعال‌سازی ساب‌دامنه پیش‌فرض ورکر...', 'text-slate-400');
+        var subUrl = proxyBase + encodeURIComponent('/accounts/' + accountId + '/workers/subdomain');
+        var subRes = await fetch(subUrl, { headers: headers });
+        var subData = await subRes.json();
+        var userSub = (subData.result && subData.result.subdomain) ? subData.result.subdomain : 'worker';
+        var finalWorkerUrl = 'https://' + wName + '.' + userSub + '.workers.dev';
+
+        var enableRouteUrl = proxyBase + encodeURIComponent('/accounts/' + accountId + '/workers/scripts/' + wName + '/subdomain');
+        await fetch(enableRouteUrl, {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify({ enabled: true })
+        });
+
+        appendLog('🎉 استقرار با موفقیت به پایان رسید!', 'text-emerald-400 font-bold text-sm');
+        appendLog('🔗 آدرس رله اختصاصی شما: ' + finalWorkerUrl, 'text-amber-300 font-mono font-bold select-all');
+
+        document.getElementById('webResultUrl').innerText = finalWorkerUrl;
+        document.getElementById('webSuccessCard').classList.remove('hidden');
+
+      } catch (err) {
+        var msg = (err && err.message) ? err.message : String(err);
+        if (msg.indexOf('Failed to fetch') !== -1 || msg.indexOf('NetworkError') !== -1) {
+          appendLog('❌ خطای محدودیت امنیتی مرورگر (CORS): مرورگر شما به دلایل امنیتی اجازه ارسال مستقیم توکن به API کلودفلر از این صفحه را نمی‌دهد.', 'text-rose-400 font-bold');
+          appendLog('💡 راهکار ۱۰۰٪ تضمینی: لطفاً روی دکمه نارنجی بالا «استقرار رسمی با Deploy to Cloudflare» کلیک کنید یا از «روش ۱ (دستور خودکار در ترمینال)» استفاده نمایید.', 'text-amber-300 font-bold');
+        } else {
+          appendLog('❌ ' + msg, 'text-rose-400 font-bold');
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen selection:bg-amber-500 selection:text-black">
+
+  <!-- Background glow -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none">
+    <div class="absolute -top-40 -right-40 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl"></div>
+    <div class="absolute top-1/2 -left-40 w-96 h-96 bg-orange-600/10 rounded-full blur-3xl"></div>
+  </div>
+
+  <div class="relative max-w-4xl mx-auto px-4 py-10 space-y-8">
+    
+    <!-- Header Hero -->
+    <div class="text-center space-y-3">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold">
+        <span>⚡</span> درگاه هوشمند هوش مصنوعی سرورلس و رایگان
+      </div>
+      <h1 class="text-3xl sm:text-5xl font-black tracking-tight text-white">
+        اتصال <span class="bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">بدون فیلترشکن</span> به ۹روتر
+      </h1>
+      <p class="text-slate-400 text-xs sm:text-sm max-w-2xl mx-auto">
+        راه‌اندازی خودکار رله اختصاصی کلودفلر و اتصال مستقیم به ۹روتر با دور زدن تحریم‌های گوگل، جمینای، آنتی‌گراویتی و کلود بدون نیاز به خاموش/روشن کردن VPN.
+      </p>
+
+      <!-- DevSponsors Badges & Quick Star -->
+      <div class="flex flex-wrap items-center justify-center gap-2 pt-2">
+        <a href="https://devsponsors.github.io" target="_blank" class="hover:opacity-90 transition">
+          <img src="https://img.shields.io/badge/DevSponsors-Verified_OSS-6366f1?style=for-the-badge&logo=github" alt="DevSponsors Verified OSS" class="h-7 rounded-lg">
+        </a>
+        <a href="https://devsponsors.github.io" target="_blank" class="hover:opacity-90 transition">
+          <img src="https://img.shields.io/badge/Sponsor-DevSponsors_Hub-emerald?style=for-the-badge&logo=github-sponsors" alt="Sponsor DevSponsors Hub" class="h-7 rounded-lg">
+        </a>
+        <a href="https://github.com/ketabchi-ar/Hermes-Cloud-Relay" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-900 border border-slate-700 text-xs font-bold text-amber-400 hover:bg-slate-800 transition">
+          <span>⭐</span> Star on GitHub
+        </a>
+      </div>
+    </div>
+
+    <!-- 3 Main Methods in Header (Always Visible) -->
+    <div class="bg-slate-900/90 border border-slate-800 p-2 rounded-3xl grid grid-cols-1 sm:grid-cols-3 gap-2">
+      <button onclick="switchMainMethod('method-cli')" id="nav-method-cli" class="px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-lg shadow-orange-500/20 transition flex items-center justify-center gap-2">
+        <span>💻</span> روش ۱: راه‌اندازی سریع با دستور (اتصال خودکار)
+      </button>
+      <button onclick="switchMainMethod('method-web')" id="nav-method-web" class="px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition flex items-center justify-center gap-2">
+        <span>🌐</span> روش ۲: ویزارد وب ۱۰۰٪ آنلاین (استقرار مستقیم از مرورگر)
+      </button>
+      <button onclick="switchMainMethod('method-manual')" id="nav-method-manual" class="px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition flex items-center justify-center gap-2">
+        <span>🛠️</span> روش ۳: کپی دستی کد در کلودفلر
+      </button>
+    </div>
+
+    <!-- SECTION 1: CLI Auto-Binder -->
+    <div id="sec-method-cli" class="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl space-y-6">
+      
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-white">روش ۱: راه‌اندازی خودکار با ۱ دستور (پیشنهادی)</h2>
+          <p class="text-xs text-slate-400">ورکر در کلودفلر ساخته شده و رله مستقیماً داخل ۹روتر ثبت و فعال می‌شود:</p>
+        </div>
+        <span class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full font-mono font-bold">بدون ریستارت سیستم</span>
+      </div>
+
+      <!-- Auth Method Tabs -->
+      <div class="flex border-b border-slate-800 gap-4 text-xs sm:text-sm font-bold">
+        <button onclick="setAuthMethod('global')" id="tabGlobal" class="pb-2.5 border-b-2 border-amber-500 text-amber-400 transition font-black">
+          روش A: با Global API Key (فوق‌العاده ساده و بدون فرم) ⭐
+        </button>
+        <button onclick="setAuthMethod('token')" id="tabToken" class="pb-2.5 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition font-bold">
+          روش B: با API Token اختصاصی
+        </button>
+      </div>
+
+      <!-- Auth Method A: Global Key -->
+      <div id="authGlobal" class="space-y-3">
+        <div class="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 text-xs text-slate-300 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-amber-300">ساده‌ترین راه بدون انتخاب هیچ گزینه‌ای:</span>
+            <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" class="text-xs bg-amber-500 hover:bg-amber-600 text-slate-950 font-black px-3 py-1 rounded-xl transition">
+              مشاهده Global API Key ↗
+            </a>
+          </div>
+          <p class="text-[11px] text-slate-400">
+            وارد لینک بالا شوید، پایین صفحه روبروی <strong>Global API Key</strong> دکمه <strong>View</strong> را بزنید، پسورد اکانت را وارد کرده و کلید را کپی و اینجا پیست کنید:
+          </p>
+        </div>
+        <div class="space-y-2">
+          <input type="password" id="cfGlobalKey" oninput="renderCliCommand()" dir="ltr" placeholder="کلید Global API Key را اینجا پیست کنید..." class="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-4 py-3 text-xs text-slate-100 transition outline-none shadow-inner">
+          <input type="email" id="cfEmail" oninput="renderCliCommand()" dir="ltr" placeholder="ایمیل اکانت کلودفلر شما (مثلاً: your@gmail.com)" class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl px-4 py-2.5 text-xs text-slate-200 transition outline-none">
+        </div>
+      </div>
+
+      <!-- Auth Method B: API Token -->
+      <div id="authToken" class="hidden space-y-3">
+        <div class="space-y-2">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <label class="text-xs font-bold text-slate-200">دریافت توکن اختصاصی کلودفلر:</label>
+            <a href="https://dash.cloudflare.com/profile/api-tokens?template=edit_cloudflare_workers" target="_blank" class="inline-flex items-center gap-1.5 text-xs bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-xl transition font-bold">
+              <span>🔗</span> صفحه ساخت توکن کلودفلر ↗
+            </a>
+          </div>
+          <div class="bg-slate-950/60 border border-slate-800/80 rounded-2xl p-3.5 text-xs text-slate-300 space-y-2">
+            <p><span class="w-4 h-4 inline-flex items-center justify-center bg-amber-500/20 text-amber-400 rounded-full text-[10px] ml-1">۱</span> در لیست تمپلیت‌ها، روبروی ردیف چهارم <strong>Edit Cloudflare Workers</strong> دکمه آبی <strong>Use template</strong> را بزنید.</p>
+            <p><span class="w-4 h-4 inline-flex items-center justify-center bg-rose-500/20 text-rose-400 rounded-full text-[10px] ml-1">۲</span> در بخش <strong>Account Resources</strong> نام اکانت خود را انتخاب کنید.</p>
+            <p><span class="w-4 h-4 inline-flex items-center justify-center bg-rose-500/20 text-rose-400 rounded-full text-[10px] ml-1">۳</span> در بخش <strong>Zone Resources</strong> گزینه دوم را به <strong>All zones</strong> تغییر دهید.</p>
+            <p><span class="w-4 h-4 inline-flex items-center justify-center bg-emerald-500/20 text-emerald-400 rounded-full text-[10px] ml-1">۴</span> پایین صفحه دکمه <strong>Continue</strong> و سپس <strong>Create Token</strong> را بزنید و توکن را کپی کنید.</p>
+          </div>
+          <input type="password" id="cfToken" oninput="renderCliCommand()" dir="ltr" placeholder="توکن ساخته شده را اینجا پیست کنید (مثلاً: vW8x_...)" class="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-4 py-3 text-xs text-slate-100 transition outline-none shadow-inner">
+        </div>
+      </div>
+
+      <!-- Advanced Settings (Worker Name & Subdomain) -->
+      <div class="pt-2 border-t border-slate-800/60 space-y-2">
+        <label class="flex items-center gap-2 cursor-pointer select-none">
+          <input type="checkbox" id="enableAdvanced" onchange="document.getElementById('advancedBox').classList.toggle('hidden', !this.checked); renderCliCommand();" class="rounded bg-slate-900 border-slate-700 text-amber-500 focus:ring-0">
+          <span class="text-xs text-slate-400 font-medium">تنظیمات پیشرفته (اختیاری: تغییر نام ورکر یا ساب‌دامنه اختصاصی)</span>
+        </label>
+        <div id="advancedBox" class="hidden space-y-3 pt-1 bg-slate-950/40 p-4 rounded-2xl border border-slate-800/60">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-[11px] text-slate-400">نام ورکر در کلودفلر (فقط حروف کوچک انگلیسی، عدد و خط تیره):</label>
+              <span id="nameErr" class="hidden text-[10px] text-rose-400 font-bold"></span>
+            </div>
+            <input type="text" id="workerName" oninput="sanitizeWorkerName(this, 'nameErr')" dir="ltr" placeholder="hermes-cloud-relay" class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl px-4 py-2 text-xs text-slate-100 transition outline-none font-mono">
+          </div>
+          <div>
+            <label class="text-[11px] text-slate-400 block mb-1">ساب‌دامنه اختصاصی شما (اختیاری - برای دسترسی بدون فیلترشکن در ایران):</label>
+            <input type="text" id="customSubdomain" oninput="sanitizeSubdomain(this)" dir="ltr" placeholder="مثال: ai.yourdomain.com (خالی بگذارید تا از پیش‌فرض استفاده شود)" class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl px-4 py-2 text-xs text-slate-100 transition outline-none font-mono">
+            <p class="text-[10px] text-slate-500 mt-1">با کلید گلوبال، رکوردهای DNS و Route به صورت ۱۰۰٪ خودکار توسط اسکریپت ساخته خواهند شد.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Generate Button -->
+      <button onclick="generateCli()" class="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-slate-950 font-black py-3.5 rounded-xl text-sm transition shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2">
+        <span>⚡</span> ساخت دستور راه‌اندازی برای سیستم شما
+      </button>
+
+      <!-- Output Command Box with OS Selector Right Above It -->
+      <div id="outputContainer" class="hidden space-y-3 pt-2">
+        <!-- Platform Selector Tabs directly above the command box -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-3 gap-2">
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-400 font-bold">سیستم‌عامل شما:</span>
+            <div class="flex gap-1.5">
+              <button onclick="selectOs('macos')" id="btn-os-macos" class="px-3 py-1.5 rounded-xl text-xs font-black bg-amber-500 text-slate-950 shadow transition flex items-center gap-1">
+                <span>🍏</span> مک (macOS)
+              </button>
+              <button onclick="selectOs('linux')" id="btn-os-linux" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition flex items-center gap-1">
+                <span>🐧</span> لینوکس (Ubuntu / Debian)
+              </button>
+              <button onclick="selectOs('windows')" id="btn-os-windows" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition flex items-center gap-1">
+                <span>🪟</span> ویندوز (PowerShell)
+              </button>
+            </div>
+          </div>
+          <button onclick="copyCommand()" id="copyBtn" class="text-xs bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black px-4 py-1.5 rounded-xl transition flex items-center justify-center gap-1 shadow-md">
+            <span>📋</span> کپی با یک کلیک
+          </button>
+        </div>
+
+        <div class="relative bg-slate-950 border border-slate-800 rounded-2xl p-4 shadow-inner">
+          <pre id="commandText" dir="ltr" class="text-xs text-amber-300 overflow-x-auto whitespace-pre-wrap select-all font-mono leading-relaxed"></pre>
+        </div>
+        
+        <p class="text-xs text-slate-300 bg-slate-950/80 border border-slate-800 p-3.5 rounded-xl leading-relaxed">
+          ⚡ <strong>تنها کار باقی‌مانده:</strong> دکمه سبز «کپی با یک کلیک» را بزنید، ترمینال سیستم خود را باز کرده، Paste کنید و اینتر بزنید. ظرف چند ثانیه ورکر در کلودفلر ساخته شده و ۹روتر شما خودکار متصل و ریستارت می‌شود!
+        </p>
+
+        <!-- Step-by-Step 9Router Verification Guide -->
+        <div class="bg-slate-950/90 border border-slate-800 p-4 sm:p-5 rounded-2xl space-y-3 text-xs text-slate-300">
+          <div class="flex items-center gap-2 text-amber-400 font-bold border-b border-slate-800 pb-2">
+            <span>📋</span> آموزش تست و راستی‌آزمایی در ۹روتر (کمتر از ۳۰ ثانیه):
+          </div>
+          <div class="space-y-2.5 leading-relaxed">
+            <p><span class="font-bold text-amber-400">۱.</span> در مرورگر خود صفحه تنظیمات پروکسی ۹روتر را باز کنید: <a href="http://127.0.0.1:20128/dashboard/proxy-pools" target="_blank" class="text-amber-300 font-mono underline font-bold">127.0.0.1:20128/dashboard/proxy-pools</a></p>
+            <p><span class="font-bold text-amber-400">۲.</span> بررسی کنید که رله جدید (<code class="text-emerald-400 font-mono font-bold">hermes-cloud-relay</code>) در لیست اضافه شده باشد و وضعیت آن فعال (سبز) باشد.</p>
+            <p><span class="font-bold text-amber-400">۳.</span> روی دکمه شبیه <strong class="text-white">لوله آزمایشگاه 🧪</strong> (با آیکون <code class="text-amber-300 font-mono text-[11px]">material-symbols-outlined text-[18px]</code>) کلیک کنید و مطمئن شوید پیام سبز <strong class="text-emerald-400 font-mono">Proxy test passed</strong> نمایش داده می‌شود.</p>
+            <p><span class="font-bold text-amber-400">۴.</span> از منوی سمت چپ وارد بخش <strong class="text-white">Providers</strong> شوید.</p>
+            <p><span class="font-bold text-amber-400">۵.</span> هر سرویسی که دچار تحریم و فیلتر است (مثلاً <strong class="text-amber-300 font-bold">Antigravity</strong> یا <strong class="text-amber-300 font-bold">Google Gemini</strong>) را انتخاب کنید.</p>
+            <p><span class="font-bold text-amber-400">۶.</span> در صفحه باز شده روی دکمه <strong class="text-white">Proxy</strong> بزنید و مطمئن شوید با همین رله جدید سینک است، سپس دکمه <strong class="text-emerald-400 font-bold">Test Connection One-by-One</strong> را بزنید.</p>
+            <p class="pt-1 text-emerald-400 font-bold flex items-center gap-1.5">
+              <span>🎉</span> تمام! حالا بدون هیچ نیازی به VPN، تمام اتصالات هوش مصنوعی شما با نهایت سرعت برقرار است.
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- SECTION 2: 100% In-Browser Web Wizard -->
+    <div id="sec-method-web" class="hidden bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl space-y-6">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+            <span>🌐</span> روش ۲: ویزارد وب ۱۰۰٪ آنلاین (استقرار مستقیم از مرورگر)
+          </h2>
+          <p class="text-xs text-slate-400">بدون نیاز به باز کردن ترمینال؛ ورکر مستقیماً در اکانت کلودفلر شما ایجاد می‌شود:</p>
+        </div>
+        <span class="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 px-3 py-1 rounded-full font-mono font-bold">بدون نیاز به ترمینال</span>
+      </div>
+
+      <!-- One-Click Official Cloudflare Deploy Banner -->
+      <div class="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-amber-300">استقرار فوق‌العاده سریع با ابزار رسمی کلودفلر:</span>
+          <span class="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full font-mono font-bold">۱۰۰٪ تضمینی</span>
+        </div>
+        <a href="https://deploy.workers.cloudflare.com/?url=https://github.com/ketabchi-ar/Hermes-Cloud-Relay" target="_blank" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-slate-950 font-black text-xs sm:text-sm shadow-lg transition flex items-center justify-center gap-2">
+          <span>⚡</span> کلیک کنید: دیپلوی مستقیم در کلودفلر (Deploy to Cloudflare) ↗
+        </a>
+        <p class="text-[11px] text-slate-400">
+          با کلیک روی دکمه بالا، کلودفلر در یک تب جداگانه باز شده و ورکر را با ۱ کلیک در اکانت شما می‌سازد (بدون نیاز به توکن).
+        </p>
+      </div>
+
+      <div class="space-y-4">
+        <div class="space-y-2">
+          <label class="text-xs font-bold text-slate-200">یا ساخت مستقیم از همین صفحه با کلید کلودفلر:</label>
+          <input type="password" id="webToken" dir="ltr" placeholder="کلید Global API Key یا توکن را اینجا پیست کنید..." class="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 rounded-xl px-4 py-3 text-xs text-slate-100 transition outline-none shadow-inner">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-slate-400 block mb-1">ایمیل اکانت کلودفلر (فقط برای Global API Key):</label>
+            <input type="email" id="webEmail" dir="ltr" placeholder="your@gmail.com" class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl px-4 py-2.5 text-xs text-slate-200 transition outline-none">
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="text-xs text-slate-400">نام ورکر در کلودفلر:</label>
+              <span id="webNameErr" class="hidden text-[10px] text-rose-400 font-bold"></span>
+            </div>
+            <input type="text" id="webWorkerName" oninput="sanitizeWorkerName(this, 'webNameErr')" dir="ltr" value="hermes-cloud-relay" class="w-full bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl px-4 py-2.5 text-xs text-slate-200 transition outline-none font-mono">
+          </div>
+        </div>
+
+        <button onclick="startWebDeploy()" class="w-full bg-slate-900 border border-amber-500/50 hover:bg-slate-800 text-amber-300 font-black py-3 rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-2">
+          <span>🚀</span> ارسال مستقیم درخواست ساخت ورکر
+        </button>
+
+        <!-- Live Web Log & Status -->
+        <div id="webStatusContainer" class="hidden space-y-3 pt-2">
+          <label class="text-xs font-bold text-slate-400">وضعیت زنده استقرار:</label>
+          <div id="webLog" dir="ltr" class="bg-slate-950 border border-slate-800 rounded-2xl p-4 text-xs font-mono max-h-52 overflow-y-auto space-y-1 select-all"></div>
+        </div>
+
+        <!-- Success Result Card -->
+        <div id="webSuccessCard" class="hidden bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-5 space-y-3">
+          <div class="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+            <span>🎉</span> ورکر با موفقیت ساخته شد و در دسترس است!
+          </div>
+          <div>
+            <p class="text-xs text-slate-400">آدرس رله کلودفلر اختصاصی شما:</p>
+            <div id="webResultUrl" dir="ltr" class="text-xs text-amber-300 font-mono font-bold select-all bg-slate-950 p-2.5 rounded-xl border border-slate-800 mt-1"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- SECTION 3: Manual Cloudflare Dashboard Deploy -->
+    <div id="sec-method-manual" class="hidden bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl space-y-5">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+            <span>🛠️</span> روش ۳: کپی دستی کد در پنل کلودفلر
+          </h2>
+          <p class="text-xs text-slate-400">مناسب کسانی که نمی‌خواهند هیچ کلید یا توکنی در برنامه یا اسکریپت وارد کنند:</p>
+        </div>
+        <span class="text-xs bg-slate-800 text-slate-300 px-3 py-1 rounded-full font-mono">بدون توکن</span>
+      </div>
+
+      <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
+        <p>۱. وارد داشبورد کلودفلر شوید: <a href="https://dash.cloudflare.com" target="_blank" class="text-amber-400 underline font-bold">dash.cloudflare.com</a></p>
+        <p>۲. از منوی سمت چپ به <strong>Workers & Pages</strong> بروید و دکمه <strong>Create Application > Create Worker</strong> را بزنید.</p>
+        <p>۳. یک نام دلخواه بگذارید (مثلاً `hermes-cloud-relay`) و دکمه <strong>Deploy</strong> و سپس <strong>Edit Code</strong> را بزنید.</p>
+        <p>۴. کدهای داخل ادیتور را پاک کنید و کدهای رسمی زیر را کپی کرده و پیست کنید، سپس <strong>Save and deploy</strong> را بزنید:</p>
+      </div>
+
+      <div class="relative bg-slate-950 border border-slate-800 rounded-2xl p-4">
+        <pre dir="ltr" class="text-xs text-amber-300 font-mono overflow-x-auto select-all max-h-60">export default {
+  async fetch(request, env, ctx) {
+    const target = request.headers.get("x-relay-target");
+    const relayPath = request.headers.get("x-relay-path") || "/";
+
+    if (!target) {
+      return new Response(JSON.stringify({ error: "Missing x-relay-target header" }), {
+        status: 400,
+        headers: { "content-type": "application/json" },
+      });
+    }
+
+    const targetUrl = target.replace(/\/$/, "") + relayPath;
+    const newRequestInit = {
+      method: request.method,
+      headers: new Headers(request.headers),
+    };
+
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      newRequestInit.body = request.body;
+      newRequestInit.duplex = "half";
+    }
+
+    newRequestInit.headers.delete("x-relay-target");
+    newRequestInit.headers.delete("x-relay-path");
+    newRequestInit.headers.delete("host");
+
+    try {
+      const response = await fetch(targetUrl, newRequestInit);
+      return new Response(response.body, {
+        status: response.status,
+        headers: response.headers,
+      });
+    } catch (error) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 502,
+        headers: { "content-type": "application/json" },
+      });
+    }
+  },
+};</pre>
+      </div>
+      <p class="text-xs text-slate-400">۵. آدرس نهایی ورکر را بردارید و در بخش Proxy Pools ۹روتر قرار دهید.</p>
+    </div>
+
+    <!-- Quick Features -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="bg-slate-900/40 border border-slate-800/80 p-5 rounded-2xl space-y-2">
+        <div class="text-xl">🚀</div>
+        <h3 class="text-sm font-bold text-white">۱۰۰٪ سرورلس و رایگان</h3>
+        <p class="text-xs text-slate-400">بدون نیاز به خرید سرور مجازی یا پرداخت هزینه، روی شبکه پرسرعت ابری کلودفلر اجرا می‌شود.</p>
+      </div>
+      <div class="bg-slate-900/40 border border-slate-800/80 p-5 rounded-2xl space-y-2">
+        <div class="text-xl">🔄</div>
+        <h3 class="text-sm font-bold text-white">سازگار با ۹روتر</h3>
+        <p class="text-xs text-slate-400">مجهز به پروتکل رسمی x-relay-target با duplex stream اختصاصی برای کمترین تاخیر پاسخگویی هوش مصنوعی.</p>
+      </div>
+      <div class="bg-slate-900/40 border border-slate-800/80 p-5 rounded-2xl space-y-2">
+        <div class="text-xl">🛡️</div>
+        <h3 class="text-sm font-bold text-white">تفکیک ترافیک ایران و خارج</h3>
+        <p class="text-xs text-slate-400">سایت‌های داخلی و اداری مستقیماً باز می‌شوند و فقط ترافیک تحریمی مدل‌ها بدون VPN از رله رد می‌شود.</p>
+      </div>
+    </div>
+
+    <!-- Star & Support Card (Bottom of page) -->
+    <div class="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-indigo-500/10 border border-slate-800 rounded-3xl p-6 sm:p-8 text-center space-y-4 shadow-xl">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold">
+        <span>⭐</span> حمایت از توسعه این پروژه متن‌باز
+      </div>
+      <h3 class="text-xl sm:text-2xl font-black text-white">به این پروژه در گیت‌هاب ستاره بدید!</h3>
+      <p class="text-xs sm:text-sm text-slate-400 max-w-xl mx-auto">
+        اگر این ابزار به اتصال آزاد و بدون فیلترشکن ۹روتر شما کمک کرده است، با دادن ستاره در گیت‌هاب به دیده شدن و ارتقای آن توسط توسعه‌دهندگان دیگر کمک کنید.
+      </p>
+      <div class="flex flex-wrap items-center justify-center gap-4 pt-2">
+        <!-- Live GitHub Star Button with Counter -->
+        <iframe src="https://ghbtns.com/github-btn.html?user=ketabchi-ar&repo=Hermes-Cloud-Relay&type=star&count=true&size=large" frameborder="0" scrolling="0" width="160" height="30" title="GitHub Star"></iframe>
+        <!-- Live GitHub Fork Button with Counter -->
+        <iframe src="https://ghbtns.com/github-btn.html?user=ketabchi-ar&repo=Hermes-Cloud-Relay&type=fork&count=true&size=large" frameborder="0" scrolling="0" width="160" height="30" title="GitHub Fork"></iframe>
+      </div>
+      <!-- Badges in Support Box -->
+      <div class="flex flex-wrap items-center justify-center gap-2 pt-3 border-t border-slate-800/80">
+        <a href="https://devsponsors.github.io" target="_blank" class="hover:opacity-90 transition">
+          <img src="https://img.shields.io/badge/DevSponsors-Verified_OSS-6366f1?style=for-the-badge&logo=github" alt="DevSponsors Verified OSS" class="h-7 rounded-lg">
+        </a>
+        <a href="https://devsponsors.github.io" target="_blank" class="hover:opacity-90 transition">
+          <img src="https://img.shields.io/badge/Sponsor-DevSponsors_Hub-emerald?style=for-the-badge&logo=github-sponsors" alt="Sponsor DevSponsors Hub" class="h-7 rounded-lg">
+        </a>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-center text-xs text-slate-600 pt-6 border-t border-slate-900">
+      توسعه یافته توسط <a href="https://github.com/ketabchi-ar/Hermes-Cloud-Relay" target="_blank" class="text-slate-400 hover:text-amber-400 transition">Ardalan Ketabchi</a> | تحت لایسنس MIT
+    </footer>
+
+  </div>
+
+</body>
+</html>
